@@ -115,6 +115,64 @@ const float cube_data[] =  // Vertex data
    +1,-1,+1,+1,   0,-1, 0,   1,0,1,  1,1,
    };
 
+const int shere_size = 42;
+unsigned int sphereBuffer;
+const float sphere_data[] =  // Vertex data
+{
+//  X  Y  Z  W   Nx Ny Nz 
+   //  Front
+   +1,+1,+1,+1,   +1,+1,+1,
+   -1,+1,+1,+1,   -1,+1,+1,
+   +0,+0,+sqrt(3),+1,   +0,+0,+1,
+
+   +1,+1,+1,+1,   +1,+1,+1,
+   +0,+0,+sqrt(3),+1,   +0,+0,+1,
+   +1,-1,+1,+1,   +1,-1,+1,
+
+   -1,+1,+1,+1,   -1,+1,+1,
+   +0,+0,+sqrt(3),+1,   +0,+0,+1,
+   -1,-1,+1,+1,   -1,-1,+1,
+
+   +0,+0,+sqrt(3),+1,   +0,+0,+1,
+   +1,-1,+1,+1,   +1,-1,+1,
+   -1,-1,+1,+1,   -1,-1,+1,
+   //  Back
+   -1,-1,-1,+1,   -1,-1,-1,
+   +1,-1,-1,+1,   +1,-1,-1,
+   -1,+1,-1,+1,   -1,+1,-1,
+   +1,-1,-1,+1,   +1,-1,-1,
+   -1,+1,-1,+1,   -1,+1,-1,
+   +1,+1,-1,+1,   +1,+1,-1,
+   //  Right
+   +1,+1,+1,+1,  +1,+1,+1,
+   +1,-1,+1,+1,  +1,-1,+1,
+   +1,+1,-1,+1,  +1,+1,-1,
+   +1,-1,+1,+1,  +1,-1,+1,
+   +1,+1,-1,+1,  +1,+1,-1,
+   +1,-1,-1,+1,  +1,-1,-1,
+   //  Left
+   -1,+1,+1,+1,  -1,+1,+1,
+   -1,+1,-1,+1,  -1,+1,-1,
+   -1,-1,+1,+1,  -1,-1,+1,
+   -1,+1,-1,+1,  -1,+1,-1,
+   -1,-1,+1,+1,  -1,-1,+1,
+   -1,-1,-1,+1,  -1,-1,-1,
+   //  Top
+   +1,+1,+1,+1,   +1,+1,+1,
+   +1,+1,-1,+1,   +1,+1,-1,
+   -1,+1,+1,+1,   -1,+1,+1,
+   +1,+1,-1,+1,   +1,+1,-1,
+   -1,+1,+1,+1,   -1,+1,+1,
+   -1,+1,-1,+1,   -1,+1,-1,
+   //  Bottom
+   -1,-1,-1,+1,   -1,-1,-1,
+   +1,-1,-1,+1,   +1,-1,-1,
+   -1,-1,+1,+1,   -1,-1,+1,
+   +1,-1,-1,+1,   +1,-1,-1,
+   -1,-1,+1,+1,   -1,-1,+1,
+   +1,-1,+1,+1,   +1,-1,+1,
+   };
+
 //
 //  Cube vertex buffer object
 //
@@ -124,6 +182,39 @@ void InitCube()
    glGenBuffers(1,&cube_buffer);
    glBindBuffer(GL_ARRAY_BUFFER,cube_buffer);
    glBufferData(GL_ARRAY_BUFFER,sizeof(cube_data),cube_data,GL_STATIC_DRAW);
+
+   //  Unbind this buffer
+   glBindBuffer(GL_ARRAY_BUFFER,0);
+}
+
+void InitSpheere()
+{
+   //  Copy data to vertex buffer object
+   glGenBuffers(1, &sphereBuffer);
+   glBindBuffer(GL_ARRAY_BUFFER, sphereBuffer);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_data), sphere_data, GL_DYNAMIC_DRAW);
+
+   //  Unbind buffer
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void DrawSphere() 
+{
+   //  Select cube buffer
+   glBindBuffer(GL_ARRAY_BUFFER,sphereBuffer);
+   //   Attribute 0: vertex coordinate (vec4) at offset 0
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,7*sizeof(float),(void*)0);
+   //   Attribute 2: vertex normal (vec3) at offset 4
+   glEnableVertexAttribArray(1);
+   glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 7*sizeof(float), (void*)(4*sizeof(float)));      
+
+   // Draw the cube
+   glDrawArrays(GL_TRIANGLES,0,shere_size);
+
+   //  Disable vertex arrays
+   glDisableVertexAttribArray(0);
+   glDisableVertexAttribArray(1);
 
    //  Unbind this buffer
    glBindBuffer(GL_ARRAY_BUFFER,0);
@@ -242,32 +333,34 @@ void display()
    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 
-   //  Select cube buffer
-   glBindBuffer(GL_ARRAY_BUFFER,cube_buffer);
-   //   Attribute 0: vertex coordinate (vec4) at offset 0
-   glEnableVertexAttribArray(0);
-   glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)0);
-   //   Attribute 2: vertex normal (vec3) at offset 4
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(4*sizeof(float)));      
-   //   Attribute 2:  vertex color (vec3) offset 7 floats
-   glEnableVertexAttribArray(2);
-   glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)(7*sizeof(float)));
-   //   Attribute 3: vertex texture coordinate (vec2) offset 10
-   glEnableVertexAttribArray(3);
-   glVertexAttribPointer(3,2, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(10*sizeof(float)));
+   // //  Select cube buffer
+   // glBindBuffer(GL_ARRAY_BUFFER,cube_buffer);
+   // //   Attribute 0: vertex coordinate (vec4) at offset 0
+   // glEnableVertexAttribArray(0);
+   // glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)0);
+   // //   Attribute 2: vertex normal (vec3) at offset 4
+   // glEnableVertexAttribArray(1);
+   // glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(4*sizeof(float)));      
+   // //   Attribute 2:  vertex color (vec3) offset 7 floats
+   // glEnableVertexAttribArray(2);
+   // glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)(7*sizeof(float)));
+   // //   Attribute 3: vertex texture coordinate (vec2) offset 10
+   // glEnableVertexAttribArray(3);
+   // glVertexAttribPointer(3,2, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(10*sizeof(float)));
 
-   // Draw the cube
-   glDrawArrays(GL_TRIANGLES,0,cube_size);
+   // // Draw the cube
+   // glDrawArrays(GL_TRIANGLES,0,cube_size);
 
-   //  Disable vertex arrays
-   glDisableVertexAttribArray(0);
-   glDisableVertexAttribArray(1);
-   glDisableVertexAttribArray(2);
-   glDisableVertexAttribArray(3);
+   // //  Disable vertex arrays
+   // glDisableVertexAttribArray(0);
+   // glDisableVertexAttribArray(1);
+   // glDisableVertexAttribArray(2);
+   // glDisableVertexAttribArray(3);
 
-   //  Unbind this buffer
-   glBindBuffer(GL_ARRAY_BUFFER,0);
+   // //  Unbind this buffer
+   // glBindBuffer(GL_ARRAY_BUFFER,0);
+
+   DrawSphere();
 
    //  Display parameters
    glWindowPos2i(5,5);
@@ -412,6 +505,7 @@ int main(int argc,char* argv[])
    shader = CreateShaderProg("gl430.vert","gl430.frag");
    //  Initialize cube
    InitCube();
+   InitSpheere();
    //  Initialize lights
    InitLights();
    //  Initialize tranfomations

@@ -1,8 +1,14 @@
 #version 430 core
 
 //  Transformation matrices
-uniform mat4 ModelViewMatrix;
-uniform mat4 ProjectionMatrix;
+uniform Tranformations {
+	// Projection Matrix
+	mat4 ProjectionMatrix;
+	// ModelView Matrix
+	mat4 ModelViewMatrix;
+	// ModelViewProjection Matrix
+	mat4 MVP;
+} tranformations;
 
 uniform Light {
 	// Position
@@ -31,12 +37,12 @@ out vec2 ITextCoord;
 void main()
 {	
    //  Pass colors to fragment shader (will be interpolated)
-   IPosition = vec3(ModelViewMatrix * Vertex);
-   INormal = normalize(transpose(inverse(mat3(ModelViewMatrix))) * Normal);
+   IPosition = vec3(tranformations.ModelViewMatrix * Vertex);
+   INormal = normalize(transpose(inverse(mat3(tranformations.ModelViewMatrix))) * Normal);
    FrontColor = Color;
    ITextCoord = TextCoord;
 
 	// FrontColor = abs(Normal);
    //  Set transformed vertex location
-   gl_Position =  ProjectionMatrix * ModelViewMatrix * Vertex;
+   gl_Position =  tranformations.MVP * Vertex;
 }

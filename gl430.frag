@@ -1,8 +1,14 @@
 #version 430 core
 
 //  Transformation matrices
-uniform mat4 ModelViewMatrix;
-uniform mat4 ProjectionMatrix;
+uniform Tranformations {
+	// Projection Matrix
+	mat4 ProjectionMatrix;
+	// ModelView Matrix
+	mat4 ModelViewMatrix;
+	// ModelViewProjection Matrix
+	mat4 MVP;
+} tranformations;
 
 uniform Light {
 	// Position
@@ -37,7 +43,7 @@ vec4 phong()
 	vec3 N = INormal;
 
 	// Light vector
-	vec3 L = normalize(vec3(ModelViewMatrix * light.position) - pos);
+	vec3 L = normalize(vec3(tranformations.ModelViewMatrix * light.position) - pos);
 
 	// Reflection vector
 	vec3 R = reflect(-L, N);

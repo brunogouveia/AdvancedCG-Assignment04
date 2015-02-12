@@ -8,6 +8,8 @@ uniform Tranformations {
 	mat4 ModelViewMatrix;
 	// ModelViewProjection Matrix
 	mat4 MVP;
+	// Normal matrix;
+	mat4 normalMatrix;
 } tranformations;
 
 uniform Light {
@@ -20,6 +22,10 @@ uniform Light {
 	vec4 diffuse;
 	vec4 specular;
 } light;
+
+
+uniform vec3 center;
+uniform float radius;
 
 //  Vertex attributes (input)
 layout(location = 0) in vec4 Vertex;
@@ -36,13 +42,20 @@ out vec2 ITextCoord;
 
 void main()
 {	
+   // Compute the normalized vector
+   //   The idea is to use a cube to get a lot of distributed vertices and normalize those vertices
+   // so then all the vertices will be equally distant from center (a sphere).
+   //   This is definitely not the best way to do this, I just thought that would be interesting do this
+   // in the shader
+   vec4 v = vec4(radius*normalize(Vertex.xyz) + center, 1.0);
+
    //  Pass colors to fragment shader (will be interpolated)
-   IPosition = vec3(tranformations.ModelViewMatrix * Vertex);
-   INormal = normalize(transpose(inverse(mat3(tranformations.ModelViewMatrix))) * Normal);
+   IPosition = vec3(tranformations.ModelViewMatrix * v);
+   // The normal is a vector parallel to vertex
+   INormal = normalize(mat3(tranformations.normalMatrix) * Vertex.xyz);
    FrontColor = Color;
    ITextCoord = TextCoord;
 
-	// FrontColor = abs(Normal);
    //  Set transformed vertex location
-   gl_Position =  tranformations.MVP * Vertex;
+   gl_Position =  (tranformations.MVP * v);
 }

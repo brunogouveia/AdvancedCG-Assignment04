@@ -35,9 +35,11 @@ fps.o: fps.c CSCIx239.h
 elapsed.o: elapsed.c CSCIx239.h
 shader.o: shader.c CSCIx239.h
 noise.o: noise.c CSCIx239.h
+sphere.o: sphere.c CSCIx239.h
+
 
 #  Create archive
-CSCIx239.a:fatal.o loadtexbmp.o print.o project.o errcheck.o object.o fps.o elapsed.o shader.o noise.o
+CSCIx239.a:fatal.o loadtexbmp.o print.o project.o errcheck.o object.o fps.o elapsed.o shader.o noise.o sphere.o
 	ar -rcs $@ $^
 
 # Compile rules
@@ -48,7 +50,7 @@ CSCIx239.a:fatal.o loadtexbmp.o print.o project.o errcheck.o object.o fps.o elap
 
 #  Link
 ex06:ex06.o CSCIx239.a
-	gcc -O3 -o $@ $^   $(LIBS)
+	g++ -O3 -o $@ $^   $(LIBS)
 
 #  Clean
 clean:

@@ -8,6 +8,8 @@ uniform Tranformations {
 	mat4 ModelViewMatrix;
 	// ModelViewProjection Matrix
 	mat4 MVP;
+	// Normal matrix;
+	mat4 normalMatrix;
 } tranformations;
 
 uniform Light {
@@ -40,7 +42,7 @@ vec4 phong()
 	vec3 pos = IPosition;
 
 	// Normal in eye coordinates
-	vec3 N = INormal;
+	vec3 N = normalize(INormal);
 
 	// Light vector
 	vec3 L = normalize(vec3(tranformations.ModelViewMatrix * light.position) - pos);

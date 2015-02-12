@@ -37,6 +37,10 @@ void         PrintProgramLog(int obj);
 int          CreateShaderProg(const char* VertFile,const char* FragFile);
 int          CreateNoise3D(int unit);
 
+//Sphere
+void         InitSphereBuffer();
+void         DrawSphere(int shader, float center[], float radius);
+
 #ifdef __cplusplus
 }
 #endif

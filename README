@@ -1,7 +1,6 @@
-ex06: OpenGL 3 & 4 Shaders
+hw04: OpenGL 3 & 4 Shaders
 
-Willem A. (Vlakkies) Schreuder
-CSCI4229/5229 Fall 2014
+Bruno Gouveia
 
 Demonstrates the use of OpenGL 4 style shaders
 Mixes fixed and programmable pipelines
@@ -12,6 +11,7 @@ the shaders as well as when starting GLEW
 
 Key bindings
   m/M        Cycle through shaders
+  o/O 		 Cycle through objects
   p/P        Toggle between orthogonal & perspective projection
   s/S        Start/stop light
   -/+        Change light elevation

@@ -22,13 +22,13 @@
  */
 #include "CSCIx239.h"
 #include "glm/glm.hpp"
-// #include "glm/gtc/matrix_projection.hpp"
-// glm::translate, glm::rotate, glm::scale
 #include "glm/gtc/matrix_transform.hpp"
- #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtc/matrix_inverse.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 int axes=1;       //  Display axes
 int mode=0;       //  Shader mode
+int object=0;
 int move=1;       //  Move light
 int proj=1;       //  Projection type
 int th=0;         //  Azimuth of view angle
@@ -39,8 +39,13 @@ float dim=3.0;    //  Size of world
 int zh=90;        //  Light azimuth
 float Ylight=2;   //  Light elevation
 int crate;        //  Crate texture
-int shader;       //  Shader programs
-const char* text[] = {"Fixed Pipeline","Programmable Pipeline"};
+
+#define NUM_SHADERS  3
+#define PHONG        0
+#define SPHERE       1
+#define LIGHT        2
+int shader[NUM_SHADERS] = {0,0,0};       //  Shader programs
+const char* text[] = {"Phong Shader","Sphere Shader", "Light Shader"};
 
 // Tranformation matrix data
 int transfBindingPoint = 1;
@@ -54,9 +59,9 @@ const float lightData[] =
    //Position
    2, 0, 0, 1,
    //Global
-   0.3, 0.3, 0.3, 1,
+   0.1, 0.1, 0.1, 1,
    //Ambient
-   0.3, 0.3, 0.3, 1.0,
+   0.1, 0.1, 0.1, 1.0,
    // Diffuse
    1.0, 1.0, 1.0, 1.0,
    // Specular
@@ -115,64 +120,6 @@ const float cube_data[] =  // Vertex data
    +1,-1,+1,+1,   0,-1, 0,   1,0,1,  1,1,
    };
 
-const int shere_size = 42;
-unsigned int sphereBuffer;
-const float sphere_data[] =  // Vertex data
-{
-//  X  Y  Z  W   Nx Ny Nz 
-   //  Front
-   +1,+1,+1,+1,   +1,+1,+1,
-   -1,+1,+1,+1,   -1,+1,+1,
-   +0,+0,+sqrt(3),+1,   +0,+0,+1,
-
-   +1,+1,+1,+1,   +1,+1,+1,
-   +0,+0,+sqrt(3),+1,   +0,+0,+1,
-   +1,-1,+1,+1,   +1,-1,+1,
-
-   -1,+1,+1,+1,   -1,+1,+1,
-   +0,+0,+sqrt(3),+1,   +0,+0,+1,
-   -1,-1,+1,+1,   -1,-1,+1,
-
-   +0,+0,+sqrt(3),+1,   +0,+0,+1,
-   +1,-1,+1,+1,   +1,-1,+1,
-   -1,-1,+1,+1,   -1,-1,+1,
-   //  Back
-   -1,-1,-1,+1,   -1,-1,-1,
-   +1,-1,-1,+1,   +1,-1,-1,
-   -1,+1,-1,+1,   -1,+1,-1,
-   +1,-1,-1,+1,   +1,-1,-1,
-   -1,+1,-1,+1,   -1,+1,-1,
-   +1,+1,-1,+1,   +1,+1,-1,
-   //  Right
-   +1,+1,+1,+1,  +1,+1,+1,
-   +1,-1,+1,+1,  +1,-1,+1,
-   +1,+1,-1,+1,  +1,+1,-1,
-   +1,-1,+1,+1,  +1,-1,+1,
-   +1,+1,-1,+1,  +1,+1,-1,
-   +1,-1,-1,+1,  +1,-1,-1,
-   //  Left
-   -1,+1,+1,+1,  -1,+1,+1,
-   -1,+1,-1,+1,  -1,+1,-1,
-   -1,-1,+1,+1,  -1,-1,+1,
-   -1,+1,-1,+1,  -1,+1,-1,
-   -1,-1,+1,+1,  -1,-1,+1,
-   -1,-1,-1,+1,  -1,-1,-1,
-   //  Top
-   +1,+1,+1,+1,   +1,+1,+1,
-   +1,+1,-1,+1,   +1,+1,-1,
-   -1,+1,+1,+1,   -1,+1,+1,
-   +1,+1,-1,+1,   +1,+1,-1,
-   -1,+1,+1,+1,   -1,+1,+1,
-   -1,+1,-1,+1,   -1,+1,-1,
-   //  Bottom
-   -1,-1,-1,+1,   -1,-1,-1,
-   +1,-1,-1,+1,   +1,-1,-1,
-   -1,-1,+1,+1,   -1,-1,+1,
-   +1,-1,-1,+1,   +1,-1,-1,
-   -1,-1,+1,+1,   -1,-1,+1,
-   +1,-1,+1,+1,   +1,-1,+1,
-   };
-
 //
 //  Cube vertex buffer object
 //
@@ -187,65 +134,6 @@ void InitCube()
    glBindBuffer(GL_ARRAY_BUFFER,0);
 }
 
-void InitSpheere()
-{
-   //  Copy data to vertex buffer object
-   glGenBuffers(1, &sphereBuffer);
-   glBindBuffer(GL_ARRAY_BUFFER, sphereBuffer);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_data), sphere_data, GL_DYNAMIC_DRAW);
-
-   //  Unbind buffer
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void DrawSphere() 
-{
-   //  Select cube buffer
-   glBindBuffer(GL_ARRAY_BUFFER,sphereBuffer);
-   //   Attribute 0: vertex coordinate (vec4) at offset 0
-   glEnableVertexAttribArray(0);
-   glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,7*sizeof(float),(void*)0);
-   //   Attribute 2: vertex normal (vec3) at offset 4
-   glEnableVertexAttribArray(1);
-   glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 7*sizeof(float), (void*)(4*sizeof(float)));      
-
-   // Draw the cube
-   glDrawArrays(GL_TRIANGLES,0,shere_size);
-
-   //  Disable vertex arrays
-   glDisableVertexAttribArray(0);
-   glDisableVertexAttribArray(1);
-
-   //  Unbind this buffer
-   glBindBuffer(GL_ARRAY_BUFFER,0);
-}
-
-void UpdateTranformations();
-//
-//
-//
-void InitTranformations() 
-{
-   int transfBlockId = glGetUniformBlockIndex(shader, "Tranformations");
-   if (transfBlockId >= 0)
-   {
-      // Set the biding point of the uniform
-      glUniformBlockBinding(shader, transfBlockId, transfBindingPoint);
-
-      // Generate buffer
-      glGenBuffers(1, &transfBuffer);
-      glBindBuffer(GL_UNIFORM_BUFFER, transfBuffer);
-
-      // Bind buffer to biding point
-      float data[48] = {0};
-      glBufferData(GL_UNIFORM_BUFFER, sizeof(data), data, GL_DYNAMIC_DRAW);
-      glBindBufferBase(GL_UNIFORM_BUFFER, transfBindingPoint, transfBuffer);
-
-      // Initialize
-      UpdateTranformations();
-   }
-}
-
 //
 //
 //
@@ -255,7 +143,9 @@ void UpdateTranformations()
    glBindBuffer(GL_UNIFORM_BUFFER, transfBuffer);
 
    // Update projection matrix
-   glm::mat4 projectionMatrix = glm::perspective<float>(M_PI*fov/180.0, asp, dim/16.0, 16.0*dim);
+   glm::mat4 projectionMatrix = (proj) 
+      ? glm::perspective<float>(M_PI*fov/180.0, asp, dim/16.0, 16.0*dim) 
+      : glm::ortho<float>(-asp*dim,asp*dim,-dim,dim,-3*dim,3*dim);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, 16*sizeof(float), glm::value_ptr(projectionMatrix));
 
    // Update modelView Matrix 
@@ -268,8 +158,38 @@ void UpdateTranformations()
    // Update projectionModelView matrix
    glBufferSubData(GL_UNIFORM_BUFFER, 32*sizeof(float), 16*sizeof(float), glm::value_ptr(projectionMatrix * viewMatrix));
 
+   // Update normal matrix
+   glBufferSubData(GL_UNIFORM_BUFFER, 48*sizeof(float), 16*sizeof(float), glm::value_ptr(glm::inverseTranspose(viewMatrix)));
+
    // Unbind buffer
    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+//
+//
+//
+void InitTranformations() 
+{
+   // For each shader
+   for (int i = 0; i < NUM_SHADERS; ++i)
+   {
+      // Find block id
+      int transfBlockId = glGetUniformBlockIndex(shader[i], "Tranformations");
+      // Set the biding point of the uniform
+      if (transfBlockId >= 0) glUniformBlockBinding(shader[i], transfBlockId, transfBindingPoint);  
+   }
+   
+   // Generate buffer
+   glGenBuffers(1, &transfBuffer);
+   glBindBuffer(GL_UNIFORM_BUFFER, transfBuffer);
+
+   // Bind buffer to biding point
+   float data[64] = {0};
+   glBufferData(GL_UNIFORM_BUFFER, sizeof(data), data, GL_DYNAMIC_DRAW);
+   glBindBufferBase(GL_UNIFORM_BUFFER, transfBindingPoint, transfBuffer);
+
+   // Initialize
+   UpdateTranformations();
 }
 
 //
@@ -278,23 +198,24 @@ void UpdateTranformations()
 void InitLights()
 
 {
-   int lightBlockId = glGetUniformBlockIndex(shader, "Light");
-   if (lightBlockId >= 0)
+   for (int i = 0; i < NUM_SHADERS; ++i)
    {
+      // Find block id
+      int lightBlockId = glGetUniformBlockIndex(shader[i], "Light");
       // Set the binding point
-      glUniformBlockBinding(shader, lightBlockId, lightBindingPoint);
-
-      // Generate buffer
-      glGenBuffers(1, &lightBuffer);
-      glBindBuffer(GL_UNIFORM_BUFFER, lightBuffer);
-
-      // Copy data to buffer
-      glBufferData(GL_UNIFORM_BUFFER, sizeof(lightData), lightData, GL_DYNAMIC_DRAW);
-      glBindBufferBase(GL_UNIFORM_BUFFER, lightBindingPoint, lightBuffer);
-
-      // Unbind buffer
-      glBindBuffer(GL_UNIFORM_BUFFER, 0);
+      if (lightBlockId >= 0) glUniformBlockBinding(shader[i], lightBlockId, lightBindingPoint);
    }
+
+   // Generate buffer
+   glGenBuffers(1, &lightBuffer);
+   glBindBuffer(GL_UNIFORM_BUFFER, lightBuffer);
+
+   // Copy data to buffer
+   glBufferData(GL_UNIFORM_BUFFER, sizeof(lightData), lightData, GL_DYNAMIC_DRAW);
+   glBindBufferBase(GL_UNIFORM_BUFFER, lightBindingPoint, lightBuffer);
+
+   // Unbind buffer
+   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 /*
@@ -308,61 +229,70 @@ void display()
    //  Enable Z-buffering in OpenGL
    glEnable(GL_DEPTH_TEST);
 
-   //  Draw light position as sphere
-   //  This uses the fixed pipeline
-   // glColor3f(1,1,1);
-   // glPushMatrix();
-   // glTranslated(Position[0],Position[1],Position[2]);
-   // glutSolidSphere(0.03,10,10);
-   // glPopMatrix();
-
-   //  OpenGL 4 style shaders
-   // Use our shader
-   glUseProgram(shader);
-
-   // Activate texture
-   glActiveTexture(GL_TEXTURE0);
-   glUniform1i(glGetUniformLocation(shader, "text"), 0 );
-   glBindTexture(GL_TEXTURE_2D,crate);
-
-
-   // Set current light position
+      // Set current light position
    float Position[]  = {(float)(2*Cos(zh)),Ylight,(float)(2*Sin(zh)),1.0};
    glBindBuffer(GL_UNIFORM_BUFFER, lightBuffer);
    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Position), Position);
    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+   //  Draw light position as sphere
+   DrawSphere(shader[LIGHT], Position, 0.04);
 
-   // //  Select cube buffer
-   // glBindBuffer(GL_ARRAY_BUFFER,cube_buffer);
-   // //   Attribute 0: vertex coordinate (vec4) at offset 0
-   // glEnableVertexAttribArray(0);
-   // glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)0);
-   // //   Attribute 2: vertex normal (vec3) at offset 4
-   // glEnableVertexAttribArray(1);
-   // glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(4*sizeof(float)));      
-   // //   Attribute 2:  vertex color (vec3) offset 7 floats
-   // glEnableVertexAttribArray(2);
-   // glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)(7*sizeof(float)));
-   // //   Attribute 3: vertex texture coordinate (vec2) offset 10
-   // glEnableVertexAttribArray(3);
-   // glVertexAttribPointer(3,2, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(10*sizeof(float)));
 
-   // // Draw the cube
-   // glDrawArrays(GL_TRIANGLES,0,cube_size);
+   // Draw Cube
+   if (object == 0) {
+      // Use our shader
+      glUseProgram(shader[PHONG]);
 
-   // //  Disable vertex arrays
-   // glDisableVertexAttribArray(0);
-   // glDisableVertexAttribArray(1);
-   // glDisableVertexAttribArray(2);
-   // glDisableVertexAttribArray(3);
+      // Activate texture
+      glActiveTexture(GL_TEXTURE0);
+      glUniform1i(glGetUniformLocation(shader[PHONG], "text"), 0 );
+      glBindTexture(GL_TEXTURE_2D,crate);
 
-   // //  Unbind this buffer
-   // glBindBuffer(GL_ARRAY_BUFFER,0);
+      //  Select cube buffer
+      glBindBuffer(GL_ARRAY_BUFFER,cube_buffer);
+      //   Attribute 0: vertex coordinate (vec4) at offset 0
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)0);
+      //   Attribute 1: vertex normal (vec3) at offset 4
+      glEnableVertexAttribArray(1);
+      glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(4*sizeof(float)));      
+      //   Attribute 2:  vertex color (vec3) offset 7 floats
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,12*sizeof(float),(void*)(7*sizeof(float)));
+      //   Attribute 3: vertex texture coordinate (vec2) offset 10
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(3,2, GL_FLOAT, GL_FALSE, 12*sizeof(float), (void*)(10*sizeof(float)));
 
-   DrawSphere();
+      // Draw the cube
+      glDrawArrays(GL_TRIANGLES,0,cube_size);
+
+      //  Disable vertex arrays
+      glDisableVertexAttribArray(0);
+      glDisableVertexAttribArray(1);
+      glDisableVertexAttribArray(2);
+      glDisableVertexAttribArray(3);
+      
+      //  Unbind this buffer
+      glBindBuffer(GL_ARRAY_BUFFER,0);
+   }
+   // Draw Cube or sphere
+   else
+   {
+       // Use our shader
+      glUseProgram(shader[mode]);
+      // Activate texture
+      glActiveTexture(GL_TEXTURE0);
+      glUniform1i(glGetUniformLocation(shader[mode], "text"), 0 );
+      glBindTexture(GL_TEXTURE_2D,crate);
+
+      // Draw a circle (or cube, depends what shader is activated)
+      float center[3] = {0};
+      DrawSphere(shader[mode], center, 1);
+   }
 
    //  Display parameters
+   glColor3f(1,1,1);
    glWindowPos2i(5,5);
    Print("FPS=%d Dim=%.1f Projection=%s Mode=%s",
      FramesPerSecond(),dim,proj?"Perpective":"Orthogonal",text[mode]);
@@ -412,12 +342,6 @@ void special(int key,int x,int y)
    ph %= 360;
    //  Update projection
    UpdateTranformations();
-   // Project(proj?fov:0,asp,dim);
-   // glm::mat4 projectionMatrix = glm::perspective<float>(M_PI*(55.0)/180.0, asp, dim/16,16*dim);
-   // // Bind buffer
-   // glBindBuffer(GL_UNIFORM_BUFFER, transfBuffer);
-   // glBufferSubData(GL_UNIFORM_BUFFER, 16*sizeof(float), 16*sizeof(float), glm::value_ptr(projectionMatrix));
-   // glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
@@ -446,6 +370,11 @@ void key(unsigned char ch,int x,int y)
    //  Cycle modes
    else if (ch == 'm' || ch == 'M')
       mode = 1-mode;
+   //  Cycle objects
+   else if (ch == 'o' || ch == 'O'){
+      object = 1-object;
+      mode = 1-mode;
+   }
    //  Light elevation
    else if (ch == '+')
       Ylight += 0.1;
@@ -458,7 +387,6 @@ void key(unsigned char ch,int x,int y)
       zh++;
    //  Reproject
    UpdateTranformations();
-   // Project(proj?fov:0,asp,dim);
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
@@ -474,7 +402,6 @@ void reshape(int width,int height)
    glViewport(0,0, width,height);
    //  Set projection
    UpdateTranformations();
-   // Project(proj?fov:0,asp,dim);
 }
 
 /*
@@ -487,7 +414,7 @@ int main(int argc,char* argv[])
    //  Request double buffered, true color window with Z buffering at 600x600
    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
    glutInitWindowSize(600,600);
-   glutCreateWindow("OpenGL 4");
+   glutCreateWindow("Bruno Gouveia - Homework4");
 #ifdef USEGLEW
    //  Initialize GLEW
    if (glewInit()!=GLEW_OK) Fatal("Error initializing GLEW\n");
@@ -502,10 +429,12 @@ int main(int argc,char* argv[])
    //  Load crate
    crate = LoadTexBMP("pi.bmp");
    //  Create Shader Programs
-   shader = CreateShaderProg("gl430.vert","gl430.frag");
+   shader[PHONG ] = CreateShaderProg("shaders/phong.vert", "shaders/phong.frag" );
+   shader[SPHERE] = CreateShaderProg("shaders/sphere.vert","shaders/sphere.frag");
+   shader[LIGHT ] = CreateShaderProg("shaders/light.vert", "shaders/light.frag" );
    //  Initialize cube
    InitCube();
-   InitSpheere();
+   InitSphereBuffer();
    //  Initialize lights
    InitLights();
    //  Initialize tranfomations
